@@ -1,0 +1,27 @@
+[submodule "extern/clean-core"]
+	path = extern/clean-core
+	url = git@github.com:project-arcana/clean-core.git
+[submodule "extern/typed-geometry"]
+	path = extern/typed-geometry
+	url = https://www.graphics.rwth-aachen.de:9000/ptrettner/typed-geometry.git
+[submodule "extern/ctracer"]
+	path = extern/ctracer
+	url = https://www.graphics.rwth-aachen.de:9000/ptrettner/ctracer.git
+[submodule "extern/reflector"]
+	path = extern/reflector
+	url = git@github.com:project-arcana/reflector.git
+[submodule "extern/task-dispatcher"]
+	path = extern/task-dispatcher
+	url = git@github.com:project-arcana/task-dispatcher.git
+[submodule "extern/rich-log"]
+	path = extern/rich-log
+	url = git@github.com:project-arcana/rich-log.git
+[submodule "extern/nexus"]
+	path = extern/nexus
+	url = git@github.com:project-arcana/nexus.git
+[submodule "extern/babel-serializer"]
+	path = extern/babel-serializer
+	url = git@github.com:project-arcana/babel-serializer.git
+[submodule "extern/cppast"]
+	path = extern/cppast
+	url = https://github.com/foonathan/cppast.git

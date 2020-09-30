@@ -8,6 +8,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# compile_commands.json
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # ===============================================
 # options
 
@@ -136,6 +139,11 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
     ${COMMON_LINKER_FLAGS}
 )
+
+# Clang filesystem
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    target_link_libraries(${PROJECT_NAME} PUBLIC stdc++fs)
+endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC "src")
 target_compile_options(${PROJECT_NAME} PUBLIC ${COMMON_COMPILER_FLAGS})

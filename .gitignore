@@ -46,3 +46,4 @@ build_vs/
 
 # misc workdir spam
 imgui.ini
+node_modules

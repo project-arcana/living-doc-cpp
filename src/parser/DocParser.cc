@@ -4,7 +4,12 @@
 
 #include <rich-log/log.hh>
 
+#include <clean-core/overloaded.hh>
+
 #include <cppast/cpp_entity_kind.hpp>
+#include <cppast/cpp_function.hpp>
+#include <cppast/cpp_member_function.hpp>
+#include <cppast/cpp_member_variable.hpp>
 #include <cppast/cpp_namespace.hpp>
 #include <cppast/libclang_parser.hpp>
 #include <cppast/visitor.hpp>
@@ -77,6 +82,15 @@ ld::file_repo ld::DocParser::parse_file(cc::string_view filename) const
         return c;
     };
 
+    // TODO!
+    auto const unique_name_of = cc::overloaded(                                              //
+        [](cppast::cpp_namespace const& e) -> cc::string { return e.name().c_str(); },       //
+        [](cppast::cpp_class const& e) -> cc::string { return e.name().c_str(); },           //
+        [](cppast::cpp_member_function const& e) -> cc::string { return e.name().c_str(); }, //
+        [](cppast::cpp_member_variable const& e) -> cc::string { return e.name().c_str(); }, //
+        [](cppast::cpp_function const& e) -> cc::string { return e.name().c_str(); }         //
+    );
+
     auto not_impl_cnt = 0;
     auto indent = 0;
     cppast::visit(*parsed_file, [&](cppast::cpp_entity const& e, cppast::visitor_info const& v) {
@@ -90,7 +104,54 @@ ld::file_repo ld::DocParser::parse_file(cc::string_view filename) const
                 auto& def = file.namespaces.emplace_back();
                 def.comment = make_comment(e);
                 def.name = d.name().c_str();
-                // TODO: unique_name
+                def.unique_name = unique_name_of(d);
+            }
+            break;
+            case cppast::cpp_entity_kind::class_t:
+            {
+                auto const& d = static_cast<cppast::cpp_class const&>(e);
+                auto& def = file.classes.emplace_back();
+                def.comment = make_comment(e);
+                def.name = d.name().c_str();
+                def.unique_name = unique_name_of(d);
+
+                // TODO: class vs struct
+            }
+            break;
+            case cppast::cpp_entity_kind::member_function_t:
+            {
+                auto const& d = static_cast<cppast::cpp_member_function const&>(e);
+                auto& def = file.functions.emplace_back();
+                def.comment = make_comment(e);
+                def.name = d.name().c_str();
+                def.unique_name = unique_name_of(d);
+
+                CC_ASSERT((d.parent().has_value() || d.semantic_parent().has_value()) && "why?");
+
+                if (d.semantic_parent().has_value())
+                {
+                    // TODO: resolve parent use unique name
+                    def.class_name = d.semantic_parent().value().name().c_str();
+                }
+                else
+                {
+                    CC_ASSERT(d.parent().has_value());
+                    auto const& p = d.parent().value();
+                    // LOG("{}", d.parent().value().kind());
+                    if (p.kind() == cppast::cpp_entity_kind::function_template_t)
+                    {
+                        CC_ASSERT(p.parent().has_value());
+                        CC_ASSERT(p.parent().value().kind() == cppast::cpp_entity_kind::class_t);
+                        def.class_name = unique_name_of(static_cast<cppast::cpp_class const&>(p.parent().value()));
+                    }
+                    else
+                    {
+                        CC_ASSERT(p.kind() == cppast::cpp_entity_kind::class_t);
+                        def.class_name = unique_name_of(static_cast<cppast::cpp_class const&>(p));
+                    }
+                }
+
+                // TODO: parameters
             }
             break;
             case cppast::cpp_entity_kind::include_directive_t:

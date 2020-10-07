@@ -1,0 +1,21 @@
+{
+    "name": "reflector",
+    "version": "develop",
+    "icon": "fa-bezier-curve",
+    "description": "Versatile reflection and introspection.",
+    "dirs": ["/home/ptrettner/projects/living-doc-cpp/extern/reflector/src/reflector"],
+    "ignored_namespaces": ["detail"],
+    "compile_config": {
+        "include_dirs": [
+            "/home/ptrettner/projects/living-doc-cpp/extern/clean-core/src/",
+            "/home/ptrettner/projects/living-doc-cpp/extern/reflector/src/"
+        ],
+        "defines": [
+            "CC_DEBUG", 
+            "CC_ENABLE_CONTRACT_CHECKING", 
+            "CC_ENABLE_BOUND_CHECKING", 
+            "CC_ENABLE_NULL_CHECKING",
+            "CC_ENABLE_ASSERTIONS"
+        ]
+    }
+}

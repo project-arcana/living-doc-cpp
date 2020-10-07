@@ -1,0 +1,18 @@
+{
+    "name": "typed-geometry",
+    "version": "develop",
+    "icon": "fa-calculator",
+    "description": "A well-typed mathematical foundation for geometry and game development.",
+    "dirs": ["/home/ptrettner/projects/living-doc-cpp/extern/typed-geometry/src/typed-geometry"],
+    "ignored_namespaces": ["detail"],
+    "compile_config": {
+        "include_dirs": ["/home/ptrettner/projects/living-doc-cpp/extern/typed-geometry/src/"],
+        "defines": [
+            "TG_DEBUG", 
+            "TG_ENABLE_INTERNAL_ASSERTIONS", 
+            "TG_ENABLE_CONTRACTS", 
+            "TG_EXPORT_LITERALS",
+            "TG_ENABLE_ASSERTIONS"
+        ]
+    }
+}

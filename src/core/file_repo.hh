@@ -117,6 +117,9 @@ struct function_info
     ///< unique name for internal addressing
     cc::string unique_name;
 
+    ///< for members: unique name of the class this function belongs to
+    cc::string class_name;
+
     ///< doc comment if any
     doc_comment comment;
 };
@@ -126,6 +129,7 @@ constexpr void introspect(In&& inspect, function_info& v)
 {
     inspect(v.name, "name");
     inspect(v.unique_name, "unique_name");
+    inspect(v.class_name, "class_name");
     inspect(v.comment, "comment");
 }
 

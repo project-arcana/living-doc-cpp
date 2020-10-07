@@ -1,6 +1,7 @@
 {
     "name": "clean-core",
     "version": "develop",
+    "description": "test library",
     "dirs": ["/home/ptrettner/projects/living-doc-cpp/extern/clean-core/src/clean-core"],
     "ignored_namespaces": ["detail"],
     "compile_config": {

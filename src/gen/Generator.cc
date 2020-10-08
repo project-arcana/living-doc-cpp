@@ -45,14 +45,15 @@ namespace
 {
 struct template_file
 {
-    cc::string& content;
+    cc::string content;
 
-    void set(cc::string key, cc::string value)
+    void set(cc::string key, cc::string const& value)
     {
         key = "{{" + key + "}}";
         CC_ASSERTF(content.contains(key), "key not found: {}", key);
         content.replace(key, value);
     }
+    void set(cc::string key, template_file const& tf) { set(key, tf.content); }
 };
 }
 
@@ -73,11 +74,12 @@ void ld::Generator::generate_html(cc::string const& template_dir_s, cc::string c
     fs::copy(template_dir / "favicon.png", target_path / "favicon.png", fs::copy_options::overwrite_existing);
     fs::copy(template_dir / "gulpfile.js", target_path / "gulpfile.js", fs::copy_options::overwrite_existing);
     fs::copy(template_dir / "package.json", target_path / "package.json", fs::copy_options::overwrite_existing);
+    fs::copy(template_dir / ".gitignore", target_path / ".gitignore", fs::copy_options::overwrite_existing);
 
     auto instantiate = [&](fs::path src, fs::path target, cc::function_ref<void(template_file&)> f) {
-        auto content = babel::file::read_all_text(src.c_str());
+        auto tf = template_file{babel::file::read_all_text(src.c_str())};
+        auto& content = tf.content;
 
-        auto tf = template_file{content};
         f(tf);
 
         CC_ASSERT(!content.contains("{{") && "missing replacement");
@@ -86,28 +88,94 @@ void ld::Generator::generate_html(cc::string const& template_dir_s, cc::string c
 
     auto load_snippet = [&](fs::path p) { return babel::file::read_all_text((template_dir / "snippets" / p).c_str()); };
 
-    auto snippet_home_library_card = load_snippet("home-library-card.html");
+    auto default_header = load_snippet("_header.html");
+
+    //
+    // home
+    //
 
     instantiate(template_dir / "pages" / "default.html", target_path / "index.html", [&](template_file& f) {
-        //
+        // snippets
+        auto s_lib_card = load_snippet("home/library-card.html");
+        auto s_main = load_snippet("home/main.html");
+
+        // meta
         f.set("title", "Project Arcana | Docs");
+        f.set("header", default_header);
 
-        cc::string lib_cards;
-        for (auto const& lib_name : _lib_names)
-        {
-            auto const& lib = _libs.get(lib_name);
-            CC_ASSERTF(lib.versions.contains_key(lib.current_version), "no default version set for {}", lib.name);
-            auto const& v = lib.versions.get(lib.current_version);
-            CC_ASSERTF(!v.cfg.name.empty(), "no config set for lib {}", lib.name);
+        // content
+        f.set("content", [&] {
+            auto f = template_file{s_main};
+            f.set("libraries", [&] {
+                cc::string lib_cards;
+                for (auto const& lib_name : _lib_names)
+                {
+                    auto const& lib = _libs.get(lib_name);
+                    CC_ASSERTF(lib.versions.contains_key(lib.current_version), "no default version set for {}", lib.name);
+                    auto const& v = lib.versions.get(lib.current_version);
+                    CC_ASSERTF(!v.cfg.name.empty(), "no config set for lib {}", lib.name);
 
-            auto card_html = snippet_home_library_card; // copy
-            auto card = template_file{card_html};
-            card.set("icon", v.cfg.icon);
-            card.set("name", v.cfg.name);
-            card.set("url", "/TODO");
-            card.set("summary", v.cfg.description);
-            lib_cards += card_html;
-        }
-        f.set("libraries", lib_cards);
+                    auto card = template_file{s_lib_card};
+                    card.set("icon", v.cfg.icon);
+                    card.set("name", v.cfg.name);
+                    card.set("url", lib_name);
+                    card.set("summary", v.cfg.description);
+                    lib_cards += card.content;
+                }
+                return lib_cards;
+            }());
+            return f;
+        }());
     });
+
+    //
+    // per lib home
+    //
+    auto s_lib_main = load_snippet("libs/main.html");
+    for (auto const& lib_name : _lib_names)
+    {
+        auto const& lib = _libs.get(lib_name);
+        auto base_dir = target_path / lib_name.c_str();
+        auto ref_dir = base_dir / "reference";
+
+        auto const& v = lib.versions.get(lib.current_version);
+        if (!fs::exists(base_dir))
+            fs::create_directory(base_dir);
+        if (!fs::exists(ref_dir))
+            fs::create_directory(ref_dir);
+
+        instantiate(template_dir / "pages" / "default.html", base_dir / "index.html", [&](template_file& f) {
+            // snippets
+
+            // meta
+            f.set("title", lib_name + " | docs");
+            f.set("header", default_header);
+
+            // content
+            f.set("content", [&] {
+                auto f = template_file{s_lib_main};
+                f.set("name", lib.name);
+                f.set("description", v.cfg.description);
+                //
+                return f;
+            }());
+        });
+
+        instantiate(template_dir / "pages" / "doc.html", ref_dir / "index.html", [&](template_file& f) {
+            // snippets
+
+            // meta
+            f.set("title", lib_name + " | reference");
+            f.set("header", default_header);
+
+            // content
+            // f.set("content", [&] {
+            //     auto f = template_file{s_lib_main};
+            //     f.set("name", lib.name);
+            //     f.set("description", v.cfg.description);
+            //     //
+            //     return f;
+            // }());
+        });
+    }
 }

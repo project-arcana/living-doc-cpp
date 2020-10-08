@@ -2,7 +2,7 @@
     "name": "reflector",
     "version": "develop",
     "icon": "fa-bezier-curve",
-    "description": "Versatile reflection and introspection.",
+    "description": "Versatile compile-time reflection and introspection for C++.",
     "dirs": ["/home/ptrettner/projects/living-doc-cpp/extern/reflector/src/reflector"],
     "ignored_namespaces": ["detail"],
     "compile_config": {

@@ -64,6 +64,9 @@ gulp.task('serve', function() {
     startPath: "./index.html",
     server: {
       baseDir: "./",
+      serveStaticOptions: {
+          extensions: ['html']
+      },
       routes: {},
       middleware: function (req, res, next) {
         if (/\.json|\.txt|\.html/.test(req.url) && req.method.toUpperCase() == 'POST') {

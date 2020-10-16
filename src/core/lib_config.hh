@@ -27,6 +27,7 @@ struct lib_config
     cc::string description;
     cc::vector<cc::string> dirs;
     cc::vector<cc::string> ignored_namespaces;
+    cc::vector<cc::string> ignored_folders;
     ld::compile_config compile_config;
 
     static lib_config from_file(cc::string_view filename);
@@ -41,6 +42,7 @@ constexpr void introspect(In&& inspect, lib_config& v)
     inspect(v.description, "description");
     inspect(v.dirs, "dirs");
     inspect(v.ignored_namespaces, "ignored_namespaces");
+    inspect(v.ignored_folders, "ignored_folders");
     inspect(v.compile_config, "compile_config");
 }
 }

@@ -191,6 +191,11 @@ struct file_repo
     /// (absolute path)
     cc::string filename;
 
+    /// e.g. vector.hh for src/clean-core/vector.hh
+    cc::string filename_without_path() const;
+    /// e.g. vector for src/clean-core/vector.hh
+    cc::string filename_without_path_and_ext() const;
+
     /// if true, belongs to a header file
     bool is_header = false;
 

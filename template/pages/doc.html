@@ -70,6 +70,8 @@
                 <!-- Sidebar Nav -->
                 <div class="collapse navbar-collapse" id="sidebar-nav">
                     <div class="js-scrollbar duik-sidebar-sticky">
+                        {{navigation}}
+
                         <h5 class="duik-sidebar__heading">Introduction</h5>
                         <ul class="duik-sidebar__nav">
                             <li class="duik-sidebar__item"><a class="duik-sidebar__link active" href="#">About</a></li>
@@ -118,6 +120,7 @@
                     <!-- Content Nav -->
                     <div class="col-xl-2 order-xl-2 d-none d-xl-inline-block">
                         <ul class="js-scroll-nav duik-content-nav">
+                            {{content-nav}}
                             <li class="duik-content-nav__item"><a href="#doc-about">About</a></li>
                             <li class="duik-content-nav__item"><a href="#doc-whats-included">What’s Included</a></li>
                             <li class="duik-content-nav__item"><a href="#doc-getting-started">Getting Started</a></li>
@@ -136,6 +139,8 @@
 
                     <!-- Content -->
                     <div class="col-xl-10 order-xl-1 duik-content border-bottom">
+                        {{content}}
+
                         <div class="border-bottom mb-7">
                             <h1>Introduction</h1>
                             <p class="lead mb-5">Get started with Docs UI Kit, Responsive Website Template for building
@@ -565,6 +570,7 @@
     <script src="/assets/vendor/jquery-ui/ui/widgets/menu.js"></script>
     <script src="/assets/vendor/jquery-ui/ui/widgets/mouse.js"></script>
     <script src="/assets/vendor/jquery-ui/ui/widgets/autocomplete.js"></script>
+    <script src="/assets/vendor/jquery-ui/ui/widgets/tooltip.js"></script>
     <script src="/assets/vendor/prism/prism.js"></script>
 
     <!-- JS -->

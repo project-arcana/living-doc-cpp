@@ -37,6 +37,18 @@ private:
         lib_config cfg;
 
         cc::vector<file_repo> files;
+
+        // e.g. /some/path/to/cc/array.hh -> clean-core/array.hh
+        // e.g. /some/path/to/cc/subdir/bla.hh -> clean-core/subdir/bla.hh
+        cc::string get_include_name_for(cc::string filename) const;
+        // e.g. /some/path/to/cc/array.hh -> array.hh
+        // e.g. /some/path/to/cc/subdir/bla.hh -> subdir/bla.hh
+        cc::string get_relative_name_for(cc::string filename) const;
+
+        // e.g. /path/to/clean-core/detail/stuff.hh
+        bool is_ignored_include(cc::string_view filename) const;
+        // e.g. /usr/include/c++/8/vector
+        bool is_system_include(cc::string_view filename) const;
     };
 
     struct library
@@ -58,5 +70,9 @@ private:
 private:
     library& get_lib(cc::string_view name);
     lib_version& get_lib_version(cc::string_view name, cc::string_view version);
+
+    // generator impl
+private:
+    struct html_gen;
 };
 }

@@ -5,6 +5,7 @@
     "description": "A well-typed mathematical foundation for geometry and game development.",
     "dirs": ["/home/ptrettner/projects/living-doc-cpp/extern/typed-geometry/src/typed-geometry"],
     "ignored_namespaces": ["detail"],
+    "ignored_folders": ["detail"],
     "compile_config": {
         "include_dirs": ["/home/ptrettner/projects/living-doc-cpp/extern/typed-geometry/src/"],
         "defines": [

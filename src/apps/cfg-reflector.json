@@ -5,6 +5,7 @@
     "description": "Versatile compile-time reflection and introspection for C++.",
     "dirs": ["/home/ptrettner/projects/living-doc-cpp/extern/reflector/src/reflector"],
     "ignored_namespaces": ["detail"],
+    "ignored_folders": ["detail"],
     "compile_config": {
         "include_dirs": [
             "/home/ptrettner/projects/living-doc-cpp/extern/clean-core/src/",

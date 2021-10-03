@@ -10,10 +10,30 @@
 
 namespace fs = std::filesystem;
 
+// see https://zzo-docs.vercel.app/zdoc/pages/blog/
+
 static constexpr char const* sys_include_dirs[] = {
     "/usr/include/c++/8/",
     "/usr/include/c++/9/",
 };
+
+namespace
+{
+void write_if_changed(fs::path path, cc::range_ref<cc::string_view> lines)
+{
+    cc::string content;
+    lines.for_each([&](cc::string_view line) {
+        content += line;
+        content += '\n';
+    });
+    auto old_content = babel::file::exists(path.c_str()) ? babel::file::read_all_text(path.c_str()) : "";
+    if (content != old_content)
+    {
+        LOG("writing changes to '{}'", path.c_str());
+        babel::file::write(path.c_str(), content);
+    }
+}
+}
 
 void ld::Generator::set_current_version(cc::string_view lib_name, cc::string version) { get_lib(lib_name).current_version = version; }
 
@@ -75,19 +95,19 @@ struct ld::Generator::hugo_gen
     }
 
     //
-    // Paths
+    // URLs
     //
-    cc::string path_for_home() const { return ""; }
-    cc::string path_for_lib_home(library const& lib) const { return cc::format("{}/_index.md", lib.name); }
-    cc::string path_for_reference(library const& lib) const { return cc::format("{}/reference/_index.md", lib.name); }
-    cc::string path_for_reference_headers(library const& lib) const { return cc::format("{}/reference/header/_index.md", lib.name); }
-    cc::string path_for_reference_header(library const& lib, file_repo const& header) const
+    cc::string url_for_home() const { return "/"; }
+    cc::string url_for_lib_home(library const& lib) const { return cc::format("/{}", lib.name); }
+    cc::string url_for_reference(library const& lib) const { return cc::format("/{}/reference", lib.name); }
+    cc::string url_for_reference_headers(library const& lib) const { return cc::format("/{}/reference/header", lib.name); }
+    cc::string url_for_reference_header(library const& lib, file_repo const& header) const
     {
-        return cc::format("{}/reference/header/{}.md", lib.name, header.filename_without_path_and_ext());
+        return cc::format("/{}/reference/header/{}", lib.name, header.filename_without_path_and_ext());
     }
 
     // TODO: version?
-    cc::string path_for_inc_dir(cc::string_view rel_inc_dir)
+    cc::string url_for_inc_dir(cc::string_view rel_inc_dir)
     {
         CC_ASSERT(!rel_inc_dir.starts_with('/'));
         for (auto const& lib : gen._libs.values())
@@ -101,235 +121,132 @@ struct ld::Generator::hugo_gen
         CC_UNREACHABLE("unknown inc dir");
         return rel_inc_dir;
     }
-    cc::string path_for_class(class_info const& ci)
+    cc::string url_for_class(class_info const& ci)
     {
         // must parse unique name, get lib, etc.
         return cc::format("/TODO/class/{}", ci.name);
     }
 
-/*
-    //
-    // home
-    //
-    void gen_home()
+    // e.g. array.hh ->
+    //      https://github.com/project-arcana/clean-core/blob/develop/src/clean-core/array.hh
+    cc::string repo_url_for_file(lib_version const& v, file_repo const& file)
     {
-        instantiate(template_dir / "pages" / "default.html", target_dir / "index.html", [&](template_file& f) {
-            // snippets
-            auto s_lib_card = load_snippet("home/library-card.html");
-            auto s_main = load_snippet("home/main.html");
-
-            // meta
-            f.set("title", "Project Arcana | Docs");
-            f.set("header", snippet.default_header);
-
-            // content
-            f.set("content", [&] {
-                auto f = template_file{s_main};
-                f.set("libraries", [&] {
-                    cc::string lib_cards;
-                    for (auto const& lib_name : gen._lib_names)
-                    {
-                        auto const& lib = gen._libs.get(lib_name);
-                        CC_ASSERTF(lib.versions.contains_key(lib.current_version), "no default version set for {}", lib.name);
-                        auto const& v = lib.versions.get(lib.current_version);
-                        CC_ASSERTF(!v.cfg.name.empty(), "no config set for lib {}", lib.name);
-
-                        auto card = template_file{s_lib_card};
-                        card.set("icon", v.cfg.icon);
-                        card.set("name", v.cfg.name);
-                        card.set("url", url_for_lib_home(lib));
-                        card.set("summary", v.cfg.description);
-                        lib_cards += card.content;
-                    }
-                    return lib_cards;
-                }());
-                return f;
-            }());
-        });
+        // simple for now
+        return cc::format("{}/{}", v.cfg.url.base, file.filename_without_path());
     }
 
-    //
-    // lib
-    //
-    void gen_lib_home(library const& lib, lib_version const& v, fs::path base_dir)
+    cc::string make_internal_ref_url(cc::string url)
     {
-        instantiate(template_dir / "pages" / "default.html", base_dir / "index.html", [&](template_file& f) {
-            // snippets
-
-            // meta
-            f.set("title", lib.name + " | docs");
-            f.set("header", snippet.default_header);
-
-            // content
-            f.set("content", [&] {
-                auto f = template_file{snippet.lib_home};
-                f.set("name", lib.name);
-                f.set("description", v.cfg.description);
-                f.set("reference_url", url_for_reference(lib));
-                return f;
-            }());
-        });
+        // DEBUG! enable me once we have complete docs
+        // return "{{< ref \"" + url + "\" >}}";
+        return url;
     }
 
-    //
-    // docs
-    //
-    cc::string make_doc_navigation(cc::string_view curr_block, cc::string_view curr_entry, library const& lib, lib_version const& v, fs::path const& ref_dir)
+    // NOTE: returns empty string for "hidden" links
+    cc::string make_markdown_inc_link(lib_version const& v, cc::string inc_dir)
     {
-        cc::string res;
+        if (v.is_ignored_include(inc_dir))
+            return "";
 
-        // headers
+        auto inc_name = v.get_include_name_for(inc_dir);
+
+        if (v.is_system_include(inc_dir))
+            return cc::format("[{}](https://en.cppreference.com/w/cpp/header/{})", inc_name, inc_name);
+
+        auto url = url_for_inc_dir(inc_name);
+        return cc::format("[{}]({})", inc_name, make_internal_ref_url(url));
+    }
+
+    struct line_writer
+    {
+        cc::vector<cc::string> lines;
+
+        template <class... Args>
+        void operator()(char const* fmt, Args&&... args)
         {
-            // TODO: link in block title
-            auto f = template_file{snippet.doc_nav_block};
-            f.set("title", "Headers");
-            f.set("elements", [&] {
-                cc::string res;
-                for (auto const& file : v.files)
-                {
-                    if (!file.is_header)
-                        continue;
+            if constexpr (sizeof...(args) == 0)
+                lines.push_back(fmt);
+            else
+                lines.push_back(cc::format(fmt, args...));
+        };
 
-                    auto f = template_file{snippet.doc_nav_element};
-                    f.set("text", file.filename_without_path());
-                    f.set("url", url_for_reference_header(lib, file));
-                    f.set("class", " code");
+        void write_if_changed(fs::path path) { ::write_if_changed(path, lines); }
+    };
 
-                    res += f.content;
-                }
-                return res;
-            }());
+    //
+    // gen pages
+    //
 
-            res += f.content;
+    void gen_header_ref(library const& lib, lib_version const& v, file_repo const& header, fs::path header_ref_dir)
+    {
+        line_writer writeln;
+
+        writeln("---");
+        writeln("title: \"{}\"", header.filename_without_path());
+        writeln("description: \"{}\"", "DESCRIBE ME");
+        writeln("---");
+        writeln("");
+
+        writeln("View [source]({}) in repository.", repo_url_for_file(v, header));
+        writeln("");
+
+        if (!header.typedefs.empty())
+        {
+            writeln("## Type Aliases");
+            for (auto const& t : header.typedefs)
+                writeln("* {}", t.unique_name);
+            writeln("");
         }
 
-        return res;
+        if (!header.classes.empty())
+        {
+            writeln("## Classes");
+            for (auto const& t : header.classes)
+                writeln("* {}", t.unique_name);
+            writeln("");
+        }
+
+        if (!header.enums.empty())
+        {
+            writeln("## Enums");
+            for (auto const& t : header.enums)
+                writeln("* {}", t.unique_name);
+            writeln("");
+        }
+
+        if (!header.functions.empty())
+        {
+            writeln("## Functions");
+            for (auto const& f : header.functions)
+                writeln("* {}", f.unique_name);
+            writeln("");
+        }
+
+        if (!header.includes.empty())
+        {
+            writeln("## Includes");
+            for (auto const& inc : header.includes)
+                if (auto mk = make_markdown_inc_link(v, inc); !mk.empty())
+                    writeln("* {}", mk);
+            writeln("");
+        }
+
+        writeln.write_if_changed(header_ref_dir / (header.filename_without_path_and_ext() + ".md").c_str());
     }
 
-    //
-    // reference
-    //
-    void gen_lib_reference(library const& lib, lib_version const& v, fs::path ref_dir)
+    void make_doc_file(fs::path path, cc::string_view title, cc::string_view layout)
     {
-        instantiate(template_dir / "pages" / "doc.html", ref_dir / "index.html", [&](template_file& f) {
-            // meta
-            f.set("title", lib.name + " | reference");
-            f.set("header", snippet.default_header);
+        cc::vector<cc::string> lines;
 
-            // navigation
-            f.set("navigation", make_doc_navigation("", "", lib, v, ref_dir));
+        lines.push_back("---");
+        lines.push_back(cc::format("title: \"{}\"", title));
+        lines.push_back(cc::format("description: \"{}\"", "DESCRIBE ME"));
+        lines.push_back(cc::format("layout: {}", layout));
+        lines.push_back("---");
+        lines.push_back("TODO");
 
-            // content
-            f.set("content", [&] {
-                auto f = template_file{snippet.lib_reference};
-                f.set("libname", lib.name);
-                return f;
-            }());
-            f.set("content-nav", "TODO");
-        });
+        write_if_changed(path, lines);
     }
-    void gen_header_reference(library const& lib, lib_version const& v, file_repo const& header, fs::path ref_dir)
-    {
-        CC_ASSERT(header.is_header);
-        auto target_path = ref_dir / cc::format("{}.html", header.filename_without_path_and_ext()).c_str();
-
-        instantiate(template_dir / "pages" / "doc.html", target_path, [&](template_file& f) {
-            // meta
-            auto header_inc_dir = v.get_include_name_for(header.filename);
-            f.set("title", cc::format("{} | {} reference", header_inc_dir, lib.name));
-            f.set("header", snippet.default_header);
-
-            // navigation
-            // TODO: set curr
-            f.set("navigation", make_doc_navigation("", "", lib, v, ref_dir));
-
-            // content
-            cc::string content_nav;
-            f.set("content", [&] {
-                cc::string r;
-
-                // intro
-                {
-                    auto f = template_file{snippet.header_reference};
-                    f.set("filename", cc::format("&lt;{}&gt;", header_inc_dir));
-                    // TOOD: fix me https://getbootstrap.com/docs/4.3/components/alerts/#javascript-behavior
-                    f.set("filename-copy", cc::format("#include &lt;{}&gt;", header_inc_dir));
-                    r += f.content;
-                }
-
-                struct cat
-                {
-                    cc::string name;
-                    cc::string link;
-                    cc::string content;
-                };
-
-                cc::vector<cat> categories;
-
-                // includes
-                if (!header.includes.empty())
-                {
-                    auto f = template_file{snippet.header_reference_includes};
-                    // TODO: sort / categorize me?
-                    cc::vector<cc::vector<cc::string>> rows;
-                    for (auto const& id : header.includes)
-                    {
-                        if (v.is_ignored_include(id))
-                            continue;
-
-                        auto inc_dir = v.get_include_name_for(id);
-                        cc::string url;
-                        if (v.is_system_include(id))
-                            url = cc::format("https://en.cppreference.com/w/cpp/header/{}", inc_dir);
-                        else
-                            url = url_for_inc_dir(inc_dir);
-
-                        auto& r = rows.emplace_back();
-                        r.push_back(cc::format(R"(<a href="{}" class="code">&lt;{}&gt;</a>)", url, inc_dir));
-                        r.push_back("TODO: description");
-                    }
-                    f.set("includes", make_table(rows));
-
-                    categories.push_back({"Includes", "includes", f.content});
-                }
-
-                // classes
-                if (!header.classes.empty())
-                {
-                    auto f = template_file{snippet.header_reference_classes};
-                    // TODO: sort / categorize me?
-                    cc::vector<cc::vector<cc::string>> rows;
-                    for (auto const& c : header.classes)
-                    {
-                        // TODO: ignore detail?
-
-                        auto url = url_for_class(c);
-
-                        auto& r = rows.emplace_back();
-                        r.push_back(cc::format(R"(<a href="{}" class="code">{}</a>)", url, c.name));
-                        // TODO: only short desc
-                        r.push_back(c.comment.content);
-                    }
-                    f.set("classes", make_table(rows));
-
-                    categories.push_back({"Classes", "classes", f.content});
-                }
-
-                // build result
-                for (auto const& c : categories)
-                {
-                    r += c.content;
-                    auto f = template_file{snippet.doc_content_nav_item};
-                    f.set("link", c.link);
-                    f.set("name", c.name);
-                    content_nav += f.content;
-                }
-
-                return r;
-            }());
-            f.set("content-nav", content_nav);
-        });
-    }*/
 
     //
     // generate
@@ -338,26 +255,90 @@ struct ld::Generator::hugo_gen
     {
         // gen_home();
 
+        // TODO: versions
         for (auto const& lib_name : gen._lib_names)
         {
             auto const& lib = gen._libs.get(lib_name);
-            auto base_dir = target_dir / lib_name.c_str();
-            auto ref_dir = base_dir / "reference";
+            auto data_path = target_dir / "data" / (lib_name + ".json").c_str();
+            auto content_dir = target_dir / "content" / lib_name.c_str();
+            auto ref_dir = content_dir / "reference";
+            auto update_dir = content_dir / "update";
+            auto blog_dir = content_dir / "blog";
+            auto tutorial_dir = content_dir / "tutorial";
+            auto guide_dir = content_dir / "guide";
             auto header_ref_dir = ref_dir / "header";
+            auto type_ref_dir = ref_dir / "type";
+            auto fun_ref_dir = ref_dir / "function";
+            auto macro_ref_dir = ref_dir / "macro";
 
             auto const& v = lib.versions.get(lib.current_version);
 
-            for (auto const& d : {base_dir, ref_dir, header_ref_dir})
+            for (auto const& d : {
+                     content_dir,
+
+                     blog_dir,
+                     update_dir,
+                     tutorial_dir,
+                     guide_dir,
+
+                     ref_dir,
+                     header_ref_dir,
+                     type_ref_dir,
+                     fun_ref_dir,
+                     macro_ref_dir,
+                 })
                 if (!fs::exists(d))
                     fs::create_directory(d);
 
-            gen_lib_home(lib, v, base_dir);
-            gen_lib_reference(lib, v, ref_dir);
+            // docs.project-arcana.net/clean-core
+            make_doc_file(content_dir / "_index.md", lib.name, "lib-home");
 
-            for (auto const& f : v.files)
             {
-                if (f.is_header)
-                    gen_header_reference(lib, v, f, ref_dir / "header");
+                // docs.project-arcana.net/clean-core/update
+                make_doc_file(update_dir / "_index.md", "updates", "lib-updates-home");
+            }
+
+            {
+                // docs.project-arcana.net/clean-core/blog
+                make_doc_file(blog_dir / "_index.md", "blog", "lib-blog-home");
+            }
+
+            {
+                // docs.project-arcana.net/clean-core/tutorial
+                make_doc_file(tutorial_dir / "_index.md", "tutorials", "lib-tutorials-home");
+            }
+
+            {
+                // docs.project-arcana.net/clean-core/guide
+                make_doc_file(guide_dir / "_index.md", "guides", "lib-guides-home");
+            }
+
+            {
+                // docs.project-arcana.net/clean-core/reference
+                make_doc_file(ref_dir / "_index.md", "reference", "lib-ref-home");
+
+                // docs.project-arcana.net/clean-core/reference/type
+                make_doc_file(type_ref_dir / "_index.md", "types", "lib-type-ref-home");
+
+                // docs.project-arcana.net/clean-core/reference/macro
+                make_doc_file(macro_ref_dir / "_index.md", "macros", "lib-macro-ref-home");
+
+                // docs.project-arcana.net/clean-core/reference/function
+                make_doc_file(fun_ref_dir / "_index.md", "functions", "lib-function-ref-home");
+
+                {
+                    // docs.project-arcana.net/clean-core/reference/header
+                    make_doc_file(header_ref_dir / "_index.md", "headers", "lib-header-ref-home");
+
+                    for (auto const& f : v.files)
+                    {
+                        // TODO: headers in subdirs
+
+                        // docs.project-arcana.net/clean-core/reference/header/vector
+                        if (f.is_header)
+                            gen_header_ref(lib, v, f, header_ref_dir);
+                    }
+                }
             }
         }
     }

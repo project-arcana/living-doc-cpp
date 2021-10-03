@@ -19,10 +19,24 @@ constexpr void introspect(In&& inspect, compile_config& v)
     inspect(v.defines, "defines");
 }
 
+struct url_config
+{
+    cc::string type;
+    cc::string base;
+};
+
+template <class In>
+constexpr void introspect(In&& inspect, url_config& v)
+{
+    inspect(v.type, "type");
+    inspect(v.base, "base");
+}
+
 struct lib_config
 {
     cc::string name;
     cc::string version;
+    url_config url;
     cc::string icon;
     cc::string description;
     cc::vector<cc::string> dirs;
@@ -38,6 +52,7 @@ constexpr void introspect(In&& inspect, lib_config& v)
 {
     inspect(v.name, "name");
     inspect(v.version, "version");
+    inspect(v.url, "url");
     inspect(v.icon, "icon");
     inspect(v.description, "description");
     inspect(v.dirs, "dirs");

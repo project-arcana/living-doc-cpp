@@ -154,6 +154,26 @@ constexpr void introspect(In&& inspect, class_info& v)
     inspect(v.comment, "comment");
 }
 
+/// entity information: a C++ typedef
+struct typedef_info
+{
+    cc::string name;
+
+    ///< unique name for internal addressing
+    cc::string unique_name;
+
+    ///< doc comment if any
+    doc_comment comment;
+};
+
+template <class In>
+constexpr void introspect(In&& inspect, typedef_info& v)
+{
+    inspect(v.name, "name");
+    inspect(v.unique_name, "unique_name");
+    inspect(v.comment, "comment");
+}
+
 struct warning
 {
     cc::string message;
@@ -211,11 +231,14 @@ struct file_repo
     /// flat list of all (potentially nested) enums in this file
     cc::vector<enum_info> enums;
 
-    /// flat list of all (potentially nested) classs in this file
+    /// flat list of all (potentially nested) classes in this file
     cc::vector<class_info> classes;
 
     /// flat list of all (potentially member) functions in this file
     cc::vector<function_info> functions;
+
+    /// flat list of all (potentially nested) typedefs and type aliases in this file
+    cc::vector<typedef_info> typedefs;
 
     /// warnings during the doc parsing process
     cc::vector<warning> warnings;
@@ -235,6 +258,7 @@ constexpr void introspect(In&& inspect, file_repo& v)
     inspect(v.enums, "enums");
     inspect(v.classes, "classes");
     inspect(v.functions, "functions");
+    inspect(v.typedefs, "typedefs");
     inspect(v.warnings, "warnings");
 }
 }

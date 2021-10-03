@@ -1,6 +1,10 @@
 {
     "name": "typed-geometry",
     "version": "develop",
+    "url": {
+        "type": "gitlab",
+        "base": "https://gitlab.vci.rwth-aachen.de:9000/ptrettner/typed-geometry/-/blob/develop/src/typed-geometry"
+    },
     "icon": "fa-calculator",
     "description": "A well-typed mathematical foundation for geometry and game development.",
     "dirs": ["/home/ptrettner/projects/living-doc-cpp/extern/typed-geometry/src/typed-geometry"],

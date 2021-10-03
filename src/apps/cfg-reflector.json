@@ -1,6 +1,10 @@
 {
     "name": "reflector",
     "version": "develop",
+    "url": {
+        "type": "github",
+        "base": "https://github.com/project-arcana/reflector/blob/develop/src/reflector"
+    },
     "icon": "fa-bezier-curve",
     "description": "Versatile compile-time reflection and introspection for C++.",
     "dirs": ["/home/ptrettner/projects/living-doc-cpp/extern/reflector/src/reflector"],

@@ -1,6 +1,10 @@
 {
     "name": "clean-core",
     "version": "develop",
+    "url": {
+        "type": "github",
+        "base": "https://github.com/project-arcana/clean-core/blob/develop/src/clean-core"
+    },
     "icon": "fa-atom",
     "description": "A modern reimagining of the C++ standard library.",
     "dirs": ["/home/ptrettner/projects/living-doc-cpp/extern/clean-core/src/clean-core"],

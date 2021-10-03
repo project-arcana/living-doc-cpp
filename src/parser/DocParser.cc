@@ -11,6 +11,7 @@
 #include <cppast/cpp_member_function.hpp>
 #include <cppast/cpp_member_variable.hpp>
 #include <cppast/cpp_namespace.hpp>
+#include <cppast/cpp_type_alias.hpp>
 #include <cppast/libclang_parser.hpp>
 #include <cppast/visitor.hpp>
 
@@ -88,6 +89,7 @@ ld::file_repo ld::DocParser::parse_file(cc::string_view filename) const
         [](cppast::cpp_class const& e) -> cc::string { return e.name().c_str(); },           //
         [](cppast::cpp_member_function const& e) -> cc::string { return e.name().c_str(); }, //
         [](cppast::cpp_member_variable const& e) -> cc::string { return e.name().c_str(); }, //
+        [](cppast::cpp_type_alias const& e) -> cc::string { return e.name().c_str(); },      //
         [](cppast::cpp_function const& e) -> cc::string { return e.name().c_str(); }         //
     );
 
@@ -152,6 +154,15 @@ ld::file_repo ld::DocParser::parse_file(cc::string_view filename) const
                 }
 
                 // TODO: parameters
+            }
+            break;
+            case cppast::cpp_entity_kind::type_alias_t:
+            {
+                auto const& d = static_cast<cppast::cpp_type_alias const&>(e);
+                auto& def = file.typedefs.emplace_back();
+                def.comment = make_comment(e);
+                def.name = d.name().c_str();
+                def.unique_name = unique_name_of(d);
             }
             break;
             case cppast::cpp_entity_kind::include_directive_t:

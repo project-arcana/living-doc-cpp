@@ -40,5 +40,6 @@ APP("lib gen test")
         gen.add_file("reflector", cfg.version, parser.parse_file(BASE_PATH "/extern/reflector/src/reflector/to_string.hh"));
     }
 
-    gen.generate_html(BASE_PATH "/template", "/home/ptrettner/tmp/arcana-docs");
+    CC_ASSERT(false && "not supported anymore");
+    // gen.generate_html(BASE_PATH "/template", "/home/ptrettner/tmp/arcana-docs");
 }

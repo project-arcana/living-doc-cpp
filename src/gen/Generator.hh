@@ -24,10 +24,10 @@ public:
     void add_file(cc::string_view lib_name, cc::string_view version, file_repo file);
     void set_lib_config(cc::string_view lib_name, cc::string_view version, lib_config cfg);
 
-    /// generates the actual documentation files
+    /// generates the actual documentation files to generate with hugo
     /// - template_dir contains assets and snippets for the HTML docs (e.g. a /assets dir)
-    /// - target_path is a directory that will contain the index.html of the final documentation
-    void generate_html(cc::string const& template_dir, cc::string const& target_path);
+    /// - target_path is a directory that will contain the config.toml of the final hugo project
+    void generate_hugo(cc::string const& template_dir, cc::string const& target_path);
 
     // private data structures
 private:
@@ -73,6 +73,6 @@ private:
 
     // generator impl
 private:
-    struct html_gen;
+    struct hugo_gen;
 };
 }

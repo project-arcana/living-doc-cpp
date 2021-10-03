@@ -50,74 +50,13 @@ ld::Generator::lib_version& ld::Generator::get_lib_version(cc::string_view name,
     return l.versions.get(version);
 }
 
-namespace
-{
-struct template_file
-{
-    cc::string content;
-
-    void set(cc::string key, cc::string const& value)
-    {
-        key = "{{" + key + "}}";
-        CC_ASSERTF(content.contains(key), "key not found: {}", key);
-        content.replace(key, value);
-    }
-    void set(cc::string key, char const* value) { set(key, cc::string(value)); }
-    void set(cc::string key, fs::path const& v) { set(key, cc::string(v.c_str())); }
-    void set(cc::string key, template_file const& tf) { set(key, tf.content); }
-};
-
-struct table_cfg
-{
-    cc::string table_class = "table-responsive-lg";
-    cc::string entry_class = "py-1";
-};
-
-cc::string make_table(cc::range_ref<cc::range_ref<cc::string_view>> rows, table_cfg const& cfg = {})
-{
-    cc::string r;
-    r += cc::format(R"(<div class="{}"><table class="table">)", cfg.table_class);
-    r += "<tbody>";
-    rows.for_each([&](cc::range_ref<cc::string_view> cols) {
-        r += "<tr>";
-        cols.for_each([&](cc::string_view entry) {
-            r += cc::format(R"(<td class="{}">)", cfg.entry_class);
-            r += entry;
-            r += "</td>";
-        });
-        r += "</tr>";
-    });
-    r += "</tbody>";
-    r += "</table></div>";
-    return r;
-}
-}
-
-struct ld::Generator::html_gen
+struct ld::Generator::hugo_gen
 {
     Generator& gen;
     fs::path template_dir;
     fs::path target_dir;
 
-    struct
-    {
-        cc::string default_header;
-
-        cc::string lib_home;
-        cc::string lib_reference;
-
-        cc::string header_reference;
-        cc::string header_reference_includes;
-        cc::string header_reference_classes;
-
-        cc::string doc_nav_block;
-        cc::string doc_nav_element;
-
-        cc::string doc_content_nav_item;
-
-    } snippet;
-
-    html_gen(Generator& gen, cc::string const& template_dir_s, cc::string const& target_path_s) : gen(gen)
+    hugo_gen(Generator& gen, cc::string const& template_dir_s, cc::string const& target_path_s) : gen(gen)
     {
         template_dir = fs::path(template_dir_s.c_str());
         target_dir = fs::path(target_path_s.c_str());
@@ -125,59 +64,30 @@ struct ld::Generator::html_gen
         CC_ASSERT(template_dir != target_dir);
         CC_ASSERT(fs::is_directory(template_dir) && "must be a directory");
         CC_ASSERT(fs::is_directory(target_dir) && "must be a directory");
-        CC_ASSERT(fs::exists(template_dir / "assets") && "needs an assets folder");
+        // CC_ASSERT(fs::exists(template_dir / "assets") && "needs an assets folder");
 
-        fs::copy(template_dir / "assets", target_dir / "assets", fs::copy_options::recursive | fs::copy_options::update_existing);
-        fs::copy(template_dir / "LICENSE", target_dir / "LICENSE", fs::copy_options::overwrite_existing);
-        fs::copy(template_dir / "favicon.png", target_dir / "favicon.png", fs::copy_options::overwrite_existing);
-        fs::copy(template_dir / "gulpfile.js", target_dir / "gulpfile.js", fs::copy_options::overwrite_existing);
-        fs::copy(template_dir / "package.json", target_dir / "package.json", fs::copy_options::overwrite_existing);
-        fs::copy(template_dir / ".gitignore", target_dir / ".gitignore", fs::copy_options::overwrite_existing);
-
-        snippet.default_header = load_snippet("_header.html");
-        snippet.lib_home = load_snippet("libs/main.html");
-        snippet.lib_reference = load_snippet("libs/reference.html");
-        snippet.header_reference = load_snippet("libs/ref-header.html");
-        snippet.header_reference_includes = load_snippet("libs/ref-header-includes.html");
-        snippet.header_reference_classes = load_snippet("libs/ref-header-classes.html");
-        snippet.doc_nav_block = load_snippet("docs/nav-block.html");
-        snippet.doc_nav_element = load_snippet("docs/nav-element.html");
-        snippet.doc_content_nav_item = load_snippet("docs/content-nav-item.html");
+        fs::copy(template_dir, target_dir, fs::copy_options::recursive | fs::copy_options::update_existing);
+        // fs::copy(template_dir / "LICENSE", target_dir / "LICENSE", fs::copy_options::overwrite_existing);
+        // fs::copy(template_dir / "favicon.png", target_dir / "favicon.png", fs::copy_options::overwrite_existing);
+        // fs::copy(template_dir / "gulpfile.js", target_dir / "gulpfile.js", fs::copy_options::overwrite_existing);
+        // fs::copy(template_dir / "package.json", target_dir / "package.json", fs::copy_options::overwrite_existing);
+        // fs::copy(template_dir / ".gitignore", target_dir / ".gitignore", fs::copy_options::overwrite_existing);
     }
 
-    cc::string load_snippet(fs::path p) { return babel::file::read_all_text((template_dir / "snippets" / p).c_str()); };
-
-    void instantiate(fs::path src, fs::path target, cc::function_ref<void(template_file&)> f)
-    {
-        auto tf = template_file{babel::file::read_all_text(src.c_str())};
-        auto& content = tf.content;
-
-        f(tf);
-
-        if (content.contains("{{"))
-        {
-            auto i = cc::string_view(content).index_of('{');
-            LOG_ERROR("missing replacement somewhere around: {}", content.subview(i, 10));
-        }
-
-        CC_ASSERT(!content.contains("{{") && "missing replacement");
-        babel::file::write(target.c_str(), content);
-    };
-
     //
-    // URLs
+    // Paths
     //
-    cc::string url_for_home() const { return "/"; }
-    cc::string url_for_lib_home(library const& lib) const { return cc::format("/{}", lib.name); }
-    cc::string url_for_reference(library const& lib) const { return cc::format("/{}/reference", lib.name); }
-    cc::string url_for_reference_headers(library const& lib) const { return cc::format("/{}/reference/header", lib.name); }
-    cc::string url_for_reference_header(library const& lib, file_repo const& header) const
+    cc::string path_for_home() const { return ""; }
+    cc::string path_for_lib_home(library const& lib) const { return cc::format("{}/_index.md", lib.name); }
+    cc::string path_for_reference(library const& lib) const { return cc::format("{}/reference/_index.md", lib.name); }
+    cc::string path_for_reference_headers(library const& lib) const { return cc::format("{}/reference/header/_index.md", lib.name); }
+    cc::string path_for_reference_header(library const& lib, file_repo const& header) const
     {
-        return cc::format("/{}/reference/header/{}", lib.name, header.filename_without_path_and_ext());
+        return cc::format("{}/reference/header/{}.md", lib.name, header.filename_without_path_and_ext());
     }
 
     // TODO: version?
-    cc::string url_for_inc_dir(cc::string_view rel_inc_dir)
+    cc::string path_for_inc_dir(cc::string_view rel_inc_dir)
     {
         CC_ASSERT(!rel_inc_dir.starts_with('/'));
         for (auto const& lib : gen._libs.values())
@@ -191,12 +101,13 @@ struct ld::Generator::html_gen
         CC_UNREACHABLE("unknown inc dir");
         return rel_inc_dir;
     }
-    cc::string url_for_class(class_info const& ci)
+    cc::string path_for_class(class_info const& ci)
     {
         // must parse unique name, get lib, etc.
         return cc::format("/TODO/class/{}", ci.name);
     }
 
+/*
     //
     // home
     //
@@ -418,14 +329,14 @@ struct ld::Generator::html_gen
             }());
             f.set("content-nav", content_nav);
         });
-    }
+    }*/
 
     //
     // generate
     //
     void generate()
     {
-        gen_home();
+        // gen_home();
 
         for (auto const& lib_name : gen._lib_names)
         {
@@ -452,9 +363,9 @@ struct ld::Generator::html_gen
     }
 };
 
-void ld::Generator::generate_html(cc::string const& template_dir_s, cc::string const& target_path_s)
+void ld::Generator::generate_hugo(cc::string const& template_dir_s, cc::string const& target_path_s)
 {
-    auto gen = html_gen{*this, template_dir_s, target_path_s};
+    auto gen = hugo_gen{*this, template_dir_s, target_path_s};
     gen.generate();
 }
 

@@ -1,0 +1,7 @@
+{
+    "libs": [
+        "cfg-clean-core.json",
+        "cfg-reflector.json",
+        "cfg-typed-geometry.json"
+    ]
+}

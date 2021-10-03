@@ -84,14 +84,35 @@ ld::file_repo ld::DocParser::parse_file(cc::string_view filename) const
     };
 
     // TODO!
-    auto const unique_name_of = cc::overloaded(                                              //
-        [](cppast::cpp_namespace const& e) -> cc::string { return e.name().c_str(); },       //
-        [](cppast::cpp_class const& e) -> cc::string { return e.name().c_str(); },           //
-        [](cppast::cpp_member_function const& e) -> cc::string { return e.name().c_str(); }, //
-        [](cppast::cpp_member_variable const& e) -> cc::string { return e.name().c_str(); }, //
-        [](cppast::cpp_type_alias const& e) -> cc::string { return e.name().c_str(); },      //
-        [](cppast::cpp_function const& e) -> cc::string { return e.name().c_str(); }         //
-    );
+    struct unique_namer
+    {
+        static cc::string unique_name_of(cppast::cpp_namespace const& e)
+        {
+            cc::string name;
+            if (e.parent().has_value() && e.parent().value().kind() == cppast::cpp_entity_kind::namespace_t)
+            {
+                name = unique_name_of(static_cast<cppast::cpp_namespace const&>(e.parent().value()));
+                name += "::";
+            }
+
+            if (e.is_anonymous())
+                return name + "<anon>";
+
+            return name + e.name().c_str();
+        }
+
+        static cc::string unique_name_of(cppast::cpp_class const& e) { return e.name().c_str(); }
+
+        static cc::string unique_name_of(cppast::cpp_member_function const& e) { return e.name().c_str(); }
+
+        static cc::string unique_name_of(cppast::cpp_member_variable const& e) { return e.name().c_str(); }
+
+        static cc::string unique_name_of(cppast::cpp_type_alias const& e) { return e.name().c_str(); }
+
+        static cc::string unique_name_of(cppast::cpp_function const& e) { return e.name().c_str(); }
+    };
+
+    auto const unique_name_of = [](auto const& e) { return unique_namer::unique_name_of(e); };
 
     auto not_impl_cnt = 0;
     auto indent = 0;

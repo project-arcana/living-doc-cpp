@@ -23,13 +23,13 @@ constexpr void introspect(In&& inspect, doc_comment& v)
 /// entity information: a C++ namespace
 struct namespace_info
 {
-    ///< empty for anon
+    /// empty for anon
     cc::string name;
 
-    ///< unique name for internal addressing
+    /// unique name for internal addressing
     cc::string unique_name;
 
-    ///< doc comment if any
+    /// doc comment if any
     doc_comment comment;
 };
 
@@ -44,16 +44,16 @@ constexpr void introspect(In&& inspect, namespace_info& v)
 /// entity information: a C++ namespace
 struct namespace_alias_info
 {
-    ///< empty for anon
+    /// empty for anon
     cc::string name;
 
-    ///< unique name for internal addressing
+    /// unique name for internal addressing
     cc::string unique_name;
 
-    ///< unique name of the target namespace
+    /// unique name of the target namespace
     cc::string target_namespace;
 
-    ///< doc comment if any
+    /// doc comment if any
     doc_comment comment;
 };
 
@@ -69,13 +69,13 @@ constexpr void introspect(In&& inspect, namespace_alias_info& v)
 /// entity information: a C++ enum
 struct enum_info
 {
-    ///< empty for anon
+    /// empty for anon
     cc::string name;
 
-    ///< unique name for internal addressing
+    /// unique name for internal addressing
     cc::string unique_name;
 
-    ///< doc comment if any
+    /// doc comment if any
     doc_comment comment;
 };
 
@@ -90,13 +90,13 @@ constexpr void introspect(In&& inspect, enum_info& v)
 /// entity information: a C++ macro
 struct macro_info
 {
-    ///< without parameters
+    /// without parameters
     cc::string name;
 
-    ///< unique name for internal addressing
+    /// unique name for internal addressing
     cc::string unique_name;
 
-    ///< doc comment if any
+    /// doc comment if any
     doc_comment comment;
 };
 
@@ -111,16 +111,18 @@ constexpr void introspect(In&& inspect, macro_info& v)
 /// entity information: a C++ function
 struct function_info
 {
-    ///< without parameters
+    /// without parameters
     cc::string name;
 
-    ///< unique name for internal addressing
+    /// unique name for internal addressing
     cc::string unique_name;
 
-    ///< for members: unique name of the class this function belongs to
+    /// for members: unique name of the class this function belongs to
     cc::string class_name;
 
-    ///< doc comment if any
+    bool is_ctor = false;
+
+    /// doc comment if any
     doc_comment comment;
 };
 
@@ -130,19 +132,20 @@ constexpr void introspect(In&& inspect, function_info& v)
     inspect(v.name, "name");
     inspect(v.unique_name, "unique_name");
     inspect(v.class_name, "class_name");
+    inspect(v.is_ctor, "is_ctor");
     inspect(v.comment, "comment");
 }
 
 /// entity information: a C++ class
 struct class_info
 {
-    ///< empty for anon
+    /// empty for anon
     cc::string name;
 
-    ///< unique name for internal addressing
+    /// unique name for internal addressing
     cc::string unique_name;
 
-    ///< doc comment if any
+    /// doc comment if any
     doc_comment comment;
 };
 
@@ -159,10 +162,10 @@ struct typedef_info
 {
     cc::string name;
 
-    ///< unique name for internal addressing
+    /// unique name for internal addressing
     cc::string unique_name;
 
-    ///< doc comment if any
+    /// doc comment if any
     doc_comment comment;
 };
 

@@ -4,7 +4,11 @@
 
 #include <rich-log/log.hh>
 
+#include <clean-core/format.hh>
 #include <clean-core/overloaded.hh>
+#include <clean-core/to_string.hh>
+
+#include <parser/unique_name.hh>
 
 #include <cppast/cpp_entity_kind.hpp>
 #include <cppast/cpp_function.hpp>
@@ -83,42 +87,53 @@ ld::file_repo ld::DocParser::parse_file(cc::string_view filename) const
         return c;
     };
 
-    // TODO!
-    struct unique_namer
-    {
-        static cc::string unique_name_of(cppast::cpp_namespace const& e)
-        {
-            cc::string name;
-            if (e.parent().has_value() && e.parent().value().kind() == cppast::cpp_entity_kind::namespace_t)
-            {
-                name = unique_name_of(static_cast<cppast::cpp_namespace const&>(e.parent().value()));
-                name += "::";
-            }
-
-            if (e.is_anonymous())
-                return name + "<anon>";
-
-            return name + e.name().c_str();
-        }
-
-        static cc::string unique_name_of(cppast::cpp_class const& e) { return e.name().c_str(); }
-
-        static cc::string unique_name_of(cppast::cpp_member_function const& e) { return e.name().c_str(); }
-
-        static cc::string unique_name_of(cppast::cpp_member_variable const& e) { return e.name().c_str(); }
-
-        static cc::string unique_name_of(cppast::cpp_type_alias const& e) { return e.name().c_str(); }
-
-        static cc::string unique_name_of(cppast::cpp_function const& e) { return e.name().c_str(); }
-    };
-
-    auto const unique_name_of = [](auto const& e) { return unique_namer::unique_name_of(e); };
-
     auto not_impl_cnt = 0;
     auto indent = 0;
     cppast::visit(*parsed_file, [&](cppast::cpp_entity const& e, cppast::visitor_info const& v) {
         if (v.event != cppast::visitor_info::container_entity_exit)
         {
+            auto const add_function_def = [&](auto const& d) -> function_info& {
+                auto& def = file.functions.emplace_back();
+                def.comment = make_comment(e);
+                def.name = d.name().c_str();
+                def.unique_name = unique_name_of(d);
+
+                CC_ASSERT((d.parent().has_value() || d.semantic_parent().has_value()) && "why?");
+
+                auto const is_in_class = d.kind() == cppast::cpp_entity_kind::member_function_t //
+                                         || d.kind() == cppast::cpp_entity_kind::constructor_t  //
+                                         || d.kind() == cppast::cpp_entity_kind::conversion_op_t;
+
+                if (is_in_class)
+                {
+                    if (d.semantic_parent().has_value())
+                    {
+                        // TODO: resolve parent use unique name
+                        def.class_name = d.semantic_parent().value().name().c_str();
+                    }
+                    else
+                    {
+                        CC_ASSERT(d.parent().has_value());
+                        auto const& p = d.parent().value();
+                        // LOG("{}", d.parent().value().kind());
+                        if (p.kind() == cppast::cpp_entity_kind::function_template_t)
+                        {
+                            CC_ASSERT(p.parent().has_value());
+                            CC_ASSERT(p.parent().value().kind() == cppast::cpp_entity_kind::class_t);
+                            def.class_name = unique_name_of(static_cast<cppast::cpp_class const&>(p.parent().value()));
+                        }
+                        else
+                        {
+                            CC_ASSERT(p.kind() == cppast::cpp_entity_kind::class_t);
+                            def.class_name = unique_name_of(static_cast<cppast::cpp_class const&>(p));
+                        }
+                    }
+                }
+
+                // TODO: parameters
+                return def;
+            };
+
             switch (e.kind())
             {
             case cppast::cpp_entity_kind::namespace_t:
@@ -141,40 +156,23 @@ ld::file_repo ld::DocParser::parse_file(cc::string_view filename) const
                 // TODO: class vs struct
             }
             break;
+            case cppast::cpp_entity_kind::constructor_t:
+            {
+                auto const& d = static_cast<cppast::cpp_constructor const&>(e);
+                auto& def = add_function_def(d);
+                def.is_ctor = true;
+            }
+            break;
             case cppast::cpp_entity_kind::member_function_t:
             {
                 auto const& d = static_cast<cppast::cpp_member_function const&>(e);
-                auto& def = file.functions.emplace_back();
-                def.comment = make_comment(e);
-                def.name = d.name().c_str();
-                def.unique_name = unique_name_of(d);
-
-                CC_ASSERT((d.parent().has_value() || d.semantic_parent().has_value()) && "why?");
-
-                if (d.semantic_parent().has_value())
-                {
-                    // TODO: resolve parent use unique name
-                    def.class_name = d.semantic_parent().value().name().c_str();
-                }
-                else
-                {
-                    CC_ASSERT(d.parent().has_value());
-                    auto const& p = d.parent().value();
-                    // LOG("{}", d.parent().value().kind());
-                    if (p.kind() == cppast::cpp_entity_kind::function_template_t)
-                    {
-                        CC_ASSERT(p.parent().has_value());
-                        CC_ASSERT(p.parent().value().kind() == cppast::cpp_entity_kind::class_t);
-                        def.class_name = unique_name_of(static_cast<cppast::cpp_class const&>(p.parent().value()));
-                    }
-                    else
-                    {
-                        CC_ASSERT(p.kind() == cppast::cpp_entity_kind::class_t);
-                        def.class_name = unique_name_of(static_cast<cppast::cpp_class const&>(p));
-                    }
-                }
-
-                // TODO: parameters
+                auto& def = add_function_def(d);
+            }
+            break;
+            case cppast::cpp_entity_kind::function_t:
+            {
+                auto const& d = static_cast<cppast::cpp_function const&>(e);
+                auto& def = add_function_def(d);
             }
             break;
             case cppast::cpp_entity_kind::type_alias_t:

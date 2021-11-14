@@ -135,7 +135,6 @@ cc::string ld::unique_name_of(ca::cpp_entity const& ee, cppast::cpp_entity_index
     }
 }
 
-// TODO: move me in header if required
 cc::string ld::unique_name_of(ca::cpp_expression const& e, cppast::cpp_entity_index const&)
 {
     switch (e.kind())
@@ -160,10 +159,15 @@ cc::string ld::unique_name_of(ca::cpp_type const& t, cppast::cpp_entity_index co
         return to_string(static_cast<ca::cpp_builtin_type const&>(t).builtin_type_kind());
 
     case ca::cpp_type_kind::user_defined_t:
-        // FIXME
-        for (auto const& e : static_cast<ca::cpp_user_defined_type const&>(t).entity().get(idx))
+    {
+        auto const& tt = static_cast<ca::cpp_user_defined_type const&>(t);
+        for (auto const& e : tt.entity().get(idx))
             return unique_name_of(*e, idx);
-        return "__unknown_user_defined_type";
+        // if no lookup was successful, this means the type is not on the index
+        // this means that the type was not declared in any parsed file
+        // this _might_ be fine for system types like size_t
+        return tt.entity().name().c_str();
+    }
 
     case ca::cpp_type_kind::auto_t:
         return "auto";
@@ -230,15 +234,6 @@ cc::string ld::unique_name_of(ca::cpp_type const& t, cppast::cpp_entity_index co
     case ca::cpp_type_kind::template_instantiation_t:
     {
         auto const& tt = static_cast<ca::cpp_template_instantiation_type const&>(t);
-        // LOG("looking up {}", tt.primary_template().name());
-        // LOG("got {} ids", tt.primary_template().id().size().get());
-        // for (auto id : tt.primary_template().id())
-        // {
-        //     auto e = idx.lookup(id);
-        //     LOG("  id: {}", (uint64_t)id);
-        //     LOG("    lookup: {}", e.has_value());
-        // }
-        // std::exit(0);
         for (auto const& e : tt.primary_template().get(idx))
         {
             auto name = unique_name_of(*e, idx);
@@ -248,6 +243,8 @@ cc::string ld::unique_name_of(ca::cpp_type const& t, cppast::cpp_entity_index co
             }
             else
             {
+                // TODO: this can be fixed in type_parser.cpp
+                //       currently does not really expose type, only stringified type (with wrong const order)
                 name += "<";
                 name += tt.unexposed_arguments().c_str();
                 name += ">";
@@ -255,7 +252,9 @@ cc::string ld::unique_name_of(ca::cpp_type const& t, cppast::cpp_entity_index co
             return name;
         }
 
-        return "__could_not_lookup_templ_" + cc::to_string(tt.primary_template().no_overloaded().get());
+        // type not on index
+        // see ca::cpp_type_kind::user_defined_t for longer explanation
+        return tt.primary_template().name().c_str();
     }
 
     case ca::cpp_type_kind::dependent_t:

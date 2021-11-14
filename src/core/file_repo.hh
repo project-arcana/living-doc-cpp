@@ -120,10 +120,30 @@ struct function_info
     /// for members: unique name of the class this function belongs to
     cc::string class_name;
 
-    bool is_ctor = false;
-
     /// doc comment if any
     doc_comment comment;
+
+    /// noexcept(<expr>)
+    cc::string noexcept_condition;
+
+    bool is_member_fun() const { return !class_name.empty(); }
+
+    bool is_ctor = false;
+    bool is_defaulted = false;
+    bool is_deleted = false;
+    bool is_constexpr = false;
+    bool is_const = false;
+    bool is_volatile = false;
+    bool is_lvalue_ref = false;
+    bool is_rvalue_ref = false;
+    bool is_conversion = false;
+    bool is_noexcept = false;
+    bool is_virtual = false;
+    bool is_pure = false;
+    bool is_override = false;
+    bool is_final = false;
+    bool is_variadic = false;
+    bool is_explicit = false;
 };
 
 template <class In>
@@ -132,8 +152,25 @@ constexpr void introspect(In&& inspect, function_info& v)
     inspect(v.name, "name");
     inspect(v.unique_name, "unique_name");
     inspect(v.class_name, "class_name");
-    inspect(v.is_ctor, "is_ctor");
     inspect(v.comment, "comment");
+    inspect(v.noexcept_condition, "noexcept_condition");
+
+    inspect(v.is_ctor, "is_ctor");
+    inspect(v.is_defaulted, "is_defaulted");
+    inspect(v.is_deleted, "is_deleted");
+    inspect(v.is_constexpr, "is_constexpr");
+    inspect(v.is_const, "is_const");
+    inspect(v.is_volatile, "is_volatile");
+    inspect(v.is_lvalue_ref, "is_lvalue_ref");
+    inspect(v.is_rvalue_ref, "is_rvalue_ref");
+    inspect(v.is_conversion, "is_conversion");
+    inspect(v.is_noexcept, "is_noexcept");
+    inspect(v.is_virtual, "is_virtual");
+    inspect(v.is_pure, "is_pure");
+    inspect(v.is_override, "is_override");
+    inspect(v.is_final, "is_final");
+    inspect(v.is_variadic, "is_variadic");
+    inspect(v.is_explicit, "is_explicit");
 }
 
 /// entity information: a C++ class

@@ -130,6 +130,23 @@ void ld::DocParser::parse_all(Generator& gen)
                             def.name = d.name().c_str();
                             def.unique_name = unique_name_of(d, idx);
 
+                            if (d.is_variadic())
+                                def.is_variadic = true;
+
+                            if (d.is_constexpr())
+                                def.is_constexpr = true;
+
+                            if (d.noexcept_condition().has_value())
+                            {
+                                def.is_noexcept = true;
+                                def.noexcept_condition = unique_name_of(d.noexcept_condition().value(), idx);
+                            }
+
+                            if (d.body_kind() == cppast::cpp_function_body_kind::cpp_function_defaulted)
+                                def.is_defaulted = true;
+                            if (d.body_kind() == cppast::cpp_function_body_kind::cpp_function_deleted)
+                                def.is_deleted = true;
+
                             CC_ASSERT((d.parent().has_value() || d.semantic_parent().has_value()) && "why?");
 
                             auto const is_in_class = d.kind() == cppast::cpp_entity_kind::member_function_t //
@@ -165,6 +182,28 @@ void ld::DocParser::parse_all(Generator& gen)
                             // TODO: parameters
                             return def;
                         };
+                        auto const process_member_fun = [&](function_info& def, cppast::cpp_member_function_base const& e) {
+                            if (is_const(e.cv_qualifier()))
+                                def.is_const = true;
+                            if (is_volatile(e.cv_qualifier()))
+                                def.is_volatile = true;
+
+                            if (e.ref_qualifier() == cppast::cpp_reference::cpp_ref_lvalue)
+                                def.is_lvalue_ref = true;
+                            if (e.ref_qualifier() == cppast::cpp_reference::cpp_ref_rvalue)
+                                def.is_rvalue_ref = true;
+
+                            if (e.is_virtual())
+                                def.is_virtual = true;
+                            if (is_pure(e.virtual_info()))
+                                def.is_pure = true;
+                            if (is_overriding(e.virtual_info()))
+                                def.is_override = true;
+                            if (is_final(e.virtual_info()))
+                                def.is_final = true;
+
+                            // TODO: return type
+                        };
 
                         switch (e.kind())
                         {
@@ -193,12 +232,8 @@ void ld::DocParser::parse_all(Generator& gen)
                             auto const& d = static_cast<cppast::cpp_constructor const&>(e);
                             auto& def = add_function_def(d);
                             def.is_ctor = true;
-                        }
-                        break;
-                        case cppast::cpp_entity_kind::member_function_t:
-                        {
-                            auto const& d = static_cast<cppast::cpp_member_function const&>(e);
-                            auto& def = add_function_def(d);
+                            if (d.is_explicit())
+                                def.is_explicit = true;
                         }
                         break;
                         case cppast::cpp_entity_kind::function_t:
@@ -207,10 +242,19 @@ void ld::DocParser::parse_all(Generator& gen)
                             auto& def = add_function_def(d);
                         }
                         break;
+                        case cppast::cpp_entity_kind::member_function_t:
+                        {
+                            auto const& d = static_cast<cppast::cpp_member_function const&>(e);
+                            auto& def = add_function_def(d);
+                            process_member_fun(def, d);
+                        }
+                        break;
                         case cppast::cpp_entity_kind::conversion_op_t:
                         {
                             auto const& d = static_cast<cppast::cpp_conversion_op const&>(e);
                             auto& def = add_function_def(d);
+                            def.is_conversion = true;
+                            process_member_fun(def, d);
                         }
                         break;
                         case cppast::cpp_entity_kind::type_alias_t:

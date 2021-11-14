@@ -217,8 +217,10 @@ struct ld::Generator::hugo_gen
         if (!header.functions.empty())
         {
             writeln("## Functions");
+            writeln("```cpp");
             for (auto const& f : header.functions)
                 writeln("* {}", f.unique_name);
+            writeln("```");
             writeln("");
         }
 

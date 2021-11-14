@@ -89,7 +89,7 @@ void ld::DocParser::parse_all(Generator& gen)
 
         // setup parser cfg
         auto cfg = cppast::libclang_compile_config();
-        cfg.set_flags(cppast::cpp_standard::cpp_1z);
+        cfg.set_flags(cppast::cpp_standard::cpp_17);
 
         for (auto const& inc : lib.cfg.compile_config.include_dirs)
             cfg.add_include_dir(inc.c_str());

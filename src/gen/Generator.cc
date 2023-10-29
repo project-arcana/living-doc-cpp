@@ -174,6 +174,47 @@ struct ld::Generator::hugo_gen
     };
 
     //
+    // data
+    //
+    struct scope_data
+    {
+        cc::vector<namespace_info> namespaces;
+        cc::vector<namespace_alias_info> namespaces_aliases;
+        cc::vector<enum_info> enums;
+        cc::vector<class_info> classes;
+        cc::vector<function_info> functions;
+        cc::vector<typedef_info> typedefs;
+    };
+
+    struct namespace_data
+    {
+        namespace_info info;
+
+        scope_data scope;
+    };
+
+    struct version_data
+    {
+        cc::map<cc::string, namespace_data> namespaces;
+    };
+
+    version_data make_version_data(lib_version const& v)
+    {
+        version_data vd;
+        for (auto const& f : v.files)
+        {
+            for (auto const& nsi : f.namespaces)
+            {
+                auto& ns = vd.namespaces[nsi.unique_name];
+                ns.info.unique_name = nsi.unique_name;
+                ns.info.name = nsi.name;
+                ns.info.comment.merge(nsi.comment);
+            }
+        }
+        return vd;
+    }
+
+    //
     // gen pages
     //
 
@@ -235,6 +276,23 @@ struct ld::Generator::hugo_gen
 
         writeln.write_if_changed(header_ref_dir / (header.filename_without_path_and_ext() + ".md").c_str());
     }
+    void gen_namespace_ref(library const& lib, lib_version const& v, namespace_data const& ns, fs::path namespace_ref_dir)
+    {
+        line_writer writeln;
+
+        writeln("---");
+        writeln("title: \"{}\"", ns.info.name);
+        writeln("description: \"{}\"", "DESCRIBE ME");
+        writeln("---");
+        writeln("");
+
+        writeln("Namespace: {}", ns.info.name);
+        writeln("");
+        writeln("Full Name: {}", ns.info.unique_name);
+        writeln("");
+
+        writeln.write_if_changed(namespace_ref_dir / (ns.info.name + ".md").c_str());
+    }
 
     void make_doc_file(fs::path path, cc::string_view title, cc::string_view layout)
     {
@@ -269,11 +327,13 @@ struct ld::Generator::hugo_gen
             auto tutorial_dir = content_dir / "tutorial";
             auto guide_dir = content_dir / "guide";
             auto header_ref_dir = ref_dir / "header";
+            auto namespace_ref_dir = ref_dir / "namespace";
             auto type_ref_dir = ref_dir / "type";
             auto fun_ref_dir = ref_dir / "function";
             auto macro_ref_dir = ref_dir / "macro";
 
             auto const& v = lib.versions.get(lib.current_version);
+            auto const data = make_version_data(v);
 
             for (auto const& d : {
                      content_dir,
@@ -285,6 +345,7 @@ struct ld::Generator::hugo_gen
 
                      ref_dir,
                      header_ref_dir,
+                     namespace_ref_dir,
                      type_ref_dir,
                      fun_ref_dir,
                      macro_ref_dir,
@@ -339,6 +400,18 @@ struct ld::Generator::hugo_gen
                         // docs.project-arcana.net/clean-core/reference/header/vector
                         if (f.is_header)
                             gen_header_ref(lib, v, f, header_ref_dir);
+                    }
+                }
+
+                {
+                    // docs.project-arcana.net/clean-core/reference/namespace
+                    make_doc_file(namespace_ref_dir / "_index.md", "namespaces", "lib-namespace-ref-home");
+
+                    for (auto const& ns : data.namespaces.values())
+                    {
+                        // TODO: sub namespaces
+
+                        gen_namespace_ref(lib, v, ns, namespace_ref_dir);
                     }
                 }
             }

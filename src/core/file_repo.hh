@@ -11,6 +11,18 @@ struct doc_comment
 {
     cc::string content;
     int line = -1;
+
+    void merge(doc_comment const& c)
+    {
+        if (content.empty())
+            *this = c;
+        else
+        {
+            // TODO: remember lines?
+            content += "\n";
+            content += c.content;
+        }
+    }
 };
 
 template <class In>

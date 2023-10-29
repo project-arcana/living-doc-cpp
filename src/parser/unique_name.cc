@@ -227,20 +227,6 @@ cc::string ld::unique_name_of(ca::cpp_entity const& ee, cppast::cpp_entity_index
             }
         }
 
-        if (e.noexcept_condition().has_value())
-        {
-            name += " ";
-            auto ne_str = unique_name_of(e.noexcept_condition().value(), idx);
-            if (ne_str == "true")
-                name += "noexcept";
-            else
-            {
-                name += "noexcept(";
-                name += ne_str;
-                name += ")";
-            }
-        }
-
         return name;
     }
 
